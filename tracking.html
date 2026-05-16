@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <title>Tracking Barang</title>
+  </head>
+  <body>
+    <div class="container" id="app">
+      <!-- navbar -->
+      <nav class="navbar">
+        <div class="logo">
+          <img src="assets/logo ut2.png" alt="Logo" class="logo-navbar" />
+          <div class="logo-name">
+            <h2 class="logo-name-header">SITTA</h2>
+            <p class="logo-name-subheader">
+              Sistem Informasi Transaksi Bahan Ajar
+            </p>
+          </div>
+        </div>
+        <div class="account">
+          <i class="fas fa-user"></i>
+        </div>
+      </nav>
+
+      <!-- Header -->
+      <header class="header-container">
+        <header class="left-header">
+          <h1 class="header-h1">Tracking Bahan Ajar</h1>
+          <nav aria-label="breadcrumb" class="link-to-back">
+            <a href="index.html" class="back-to-dashboard">Dashboard</a>
+            <span class="separator">&lt;</span>
+            <a href="tracking.html" class="back-to-dashboard"
+              >Tracking Bahan Ajar</a
+            >
+          </nav>
+        </header>
+
+        <div class="right-header">
+          <button class="add-tracking" @click="openFormTracking">
+            + Tambah Pengiriman
+          </button>
+        </div>
+      </header>
+
+      <!-- search tracking -->
+      <div class="search-tracking">
+        <h2 class="tracking-do">Cari Nomor Delivery Order (DO)</h2>
+        <form @submit.prevent="searchTracking" class="search-tracking-form">
+          <input
+            id="search-tracking-input"
+            v-model="query"
+            type="text"
+            placeholder="Masukkan Nomor DO"
+            required
+          />
+          <button id="search-tracking-button" type="submit">Cari</button>
+        </form>
+      </div>
+
+      <!-- Tambah Delivery Order Baru -->
+      <div
+        class="add-do-section"
+        v-show="showFormTracking "
+        @click.self="closeModal"
+      >
+        <div class="modal-content">
+          <button
+            class="modal-close"
+            id="modal-add-stock-close"
+            @click="closeModal"
+          >
+            &times;
+          </button>
+          <div class="modal-body">
+            <h2 class="tracking-do">Tambah Delivery Order Baru</h2>
+            <form @submit.prevent="addNewDeliveryOrder" class="add-do-form">
+              <div class="form-row">
+                <label for="new-do">Nomor DO</label>
+                <input id="new-do" type="text" :value="newDoNumber" readonly />
+              </div>
+              <div class="form-row">
+                <label for="new-nim">NIM</label>
+                <input
+                  id="new-nim"
+                  v-model="newDOEntry.nim"
+                  type="text"
+                  required
+                />
+              </div>
+              <div class="form-row">
+                <label for="new-nama">Nama</label>
+                <input
+                  id="new-nama"
+                  v-model="newDOEntry.nama"
+                  type="text"
+                  required
+                />
+              </div>
+              <div class="form-row">
+                <label for="new-ekspedisi">Ekspedisi</label>
+                <select
+                  id="new-ekspedisi"
+                  v-model="newDOEntry.ekspedisi"
+                  required
+                >
+                  <option value="">Pilih Ekspedisi</option>
+                  <option
+                    v-for="option in ekspedisiList"
+                    :key="option.kode"
+                    :value="option.nama"
+                  >
+                    {{ option.nama }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="new-paket">Paket Bahan Ajar</label>
+                <select id="new-paket" v-model="newDOEntry.paketKode" required>
+                  <option value="">Pilih Paket</option>
+                  <option
+                    v-for="paket in paketList"
+                    :key="paket.kode"
+                    :value="paket.kode"
+                  >
+                    {{ paket.kode }} - {{ paket.nama }}
+                  </option>
+                </select>
+              </div>
+
+
+              <!-- Memunculkaan detail paket -->
+              <div class="package-detail" v-if="selectedPackage">
+                <p><strong>Detail Isi Paket:</strong></p>
+                <ul>
+                  <li v-for="(item, index) in selectedPackage.isi" :key="index">
+                    {{ item }}
+                  </li>
+                </ul>
+                <p>
+                  <strong>Total Harga Paket:</strong> Rp{{
+                  selectedPackage.harga.toLocaleString() }}
+                </p>
+              </div>
+              <div class="form-row">
+                <label for="new-tanggal">Tanggal Kirim</label>
+                <input
+                  id="new-tanggal"
+                  type="date"
+                  v-model="newDOEntry.tanggalKirim"
+                  required
+                />
+              </div>
+              <div class="form-row">
+                <label>Total Harga</label>
+                <input type="text" :value="formattedTotalHarga" readonly />
+              </div>
+              <div class="form-row form-actions">
+                <button type="submit" class="btn-submit">Simpan DO Baru</button>
+              </div>
+
+              <div class="tracking-message">
+                <p class="success-message" v-if="successMessage">
+                  {{ successMessage }}
+                </p>
+                <p class="error-message" v-if="error && !result">{{ error }}</p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menampilkan Pencarian Tracking -->
+      <div id="tracking-result" class="tracking-results">
+        <template v-if="result">
+          <div class="tracking-card">
+            <h3>Hasil Tracking: {{ result.kode }}</h3>
+            <p><strong>Nama:</strong> {{ result.nama }}</p>
+            <p><strong>NIM:</strong> {{ result.nim }}</p>
+            <p><strong>Status:</strong> {{ result.status }}</p>
+            <p><strong>Ekspedisi:</strong> {{ result.ekspedisi }}</p>
+            <p><strong>Tanggal Kirim:</strong> {{ result.tanggalKirim }}</p>
+            <p><strong>Paket:</strong> {{ result.paket }}</p>
+            <p><strong>Total:</strong> Rp{{ result.total.toLocaleString() }}</p>
+            <div class="tracking-journey">
+              <h4>Perjalanan</h4>
+              <ul>
+                <li v-for="(step, index) in result.perjalanan" :key="index">
+                  <span class="journey-time">{{ step.waktu }}</span>
+                  <span class="journey-desc">{{ step.keterangan }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="error">
+          <div class="tracking-error">{{ error }}</div>
+        </template>
+
+        <template v-else>
+          <div class="tracking-empty">
+            Masukkan nomor DO untuk melihat status pengiriman.
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- VUE CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- DATA SOURCE -->
+    <script src="Js/dataBahanAjar.js"></script>
+    <!-- FILE VUE -->
+    <script src="js/tracking-app.js"></script>
+  </body>
+</html>

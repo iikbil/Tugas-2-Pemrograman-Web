@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <title>Stock Barang</title>
+  </head>
+  <body>
+    <div class="container" id="app">
+      <!-- navbar -->
+      <nav class="navbar">
+        <div class="logo">
+          <img src="assets/logo ut2.png" alt="Logo" class="logo-navbar" />
+          <div class="logo-name">
+            <h2 class="logo-name-header">SITTA</h2>
+            <p class="logo-name-subheader">
+              Sistem Informasi Transaksi Bahan Ajar
+            </p>
+          </div>
+        </div>
+        <div class="account">
+          <i class="fas fa-user"></i>
+        </div>
+      </nav>
+      <!-- Header -->
+      <header class="header-container">
+        <header class="left-header">
+          <h1 class="header-h1">Informasi Stok Bahan Ajar</h1>
+          <nav aria-label="breadcrumb" class="link-to-back">
+            <a href="index.html" class="back-to-dashboard">Dashboard</a>
+            <span class="separator">&lt;</span>
+            <a href="stock.html" class="back-to-dashboard"
+              >Informasi Bahan Ajar</a
+            >
+          </nav>
+        </header>
+
+        <div class="right-header">
+          <button class="add-stock-btn" @click="openModal">
+            + Tambah Stok BMP
+          </button>
+        </div>
+      </header>
+
+      <!-- FILTER AREA -->
+      <div class="filter-box">
+
+        <!-- FILTER UT -->
+        <div class="filter-item">
+          <label>UT-Daerah</label>
+          <select v-model="filterUpbjj">
+            <option value="">Semua UT</option>
+            <option v-for="u in upbjjList" :value="u">{{ u }}</option>
+          </select>
+        </div>
+
+        <!-- DEPENDENT FILTER -->
+        <div class="filter-item" v-if="filterUpbjj != ''">
+          <label>Kategori</label>
+          <select v-model="filterKategori">
+            <option value="">Semua Kategori</option>
+            <option v-for="k in kategoriFiltered" :value="k">{{ k }}</option>
+          </select>
+        </div>
+
+        <!-- FILTER STOK -->
+        <div class="filter-item">
+          <label>Status Stok</label>
+          <select v-model="filterStatus">
+            <option value="">Semua</option>
+            <option value="menipis">Stok &lt; Safety</option>
+            <option value="kosong">Stok = 0</option>
+          </select>
+        </div>
+
+        <!-- SORT -->
+        <div class="filter-item">
+          <label>Sort</label>
+          <select v-model="sortBy">
+            <option value="">Default</option>
+            <option value="judul">Judul</option>
+            <option value="qty">Stok</option>
+            <option value="harga">Harga</option>
+          </select>
+        </div>
+
+        <!-- RESET -->
+        <button @click="resetFilter">Reset</button>
+      </div>
+      <!-- Tabel Container -->
+      <table class="stock-table-container">
+        <thead>
+          <tr>
+            <th>Kode</th>
+            <th>Judul Bahan Ajar</th>
+            <th>Kategori</th>
+            <th>UT-Daerah</th>
+            <th>Lokasi Rak</th>
+            <th>Harga</th>
+            <th>Stok (Qty)</th>
+            <th>Stok Safety</th>
+            <th>Status Stok</th>
+            <th>Catatan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in filteredStok" :key="item.kode">
+            <td>{{ item.kode }}</td>
+            <td>{{ item.judul }}</td>
+            <td>{{ item.kategori }}</td>
+            <td>{{ item.upbjj }}</td>
+            <td>{{ item.lokasiRak }}</td>
+            <td>Rp{{ item.harga.toLocaleString() }}</td>
+            <td>{{ item.qty }}</td>
+            <td>{{ item.safety }}</td>
+            <td>
+              <span
+                :style="{ color: item.qty === 0 ? 'red' : (item.qty <= item.safety ? 'orange' : 'green'), fontWeight: 'bold' }"
+              >
+                {{ item.qty === 0 ? 'Habis' : (item.qty <= item.safety ?
+                'Menipis' : 'Aman') }}
+              </span>
+            </td>
+            <td v-html="item.catatanHTML"></td>
+            <td>
+              <button class="edit-btn" @click="openEditModal(item.kode)">
+                Edit Stok
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Modal untuk tambah stok -->
+      <!-- Modal Tambah Stock -->
+      <div
+        class="modal-overlay"
+        id="modal-add-stock"
+        v-show="showAddStockModal"
+        @click.self="closeModal"
+      >
+        <div class="modal-content">
+          <button
+            class="modal-close"
+            id="modal-add-stock-close"
+            @click="closeModal"
+          >
+            &times;
+          </button>
+          <div class="modal-body">
+            <h2>Tambah Stock Bahan Ajar</h2>
+            <form id="form-add-stock" @submit.prevent="submitNewStock"> 
+              <div class="form-group">
+                <label for="kode-BMP">Kode Mata Kuliah:</label>
+                <input
+                  type="text"
+                  id="kode-BMP"
+                  v-model="newStock.kode"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="nama-barang">Nama Bahan Ajar:</label>
+                <input
+                  type="text"
+                  id="nama-barang"
+                  v-model="newStock.judul"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="kategori-MK">Kategori Mata Kuliah:</label>
+                <select id="kategori-MK" v-model="newStock.kategori" required>
+                  <option value="">Pilih Kategori</option>
+                  <option
+                    v-for="kategori in kategoriList"
+                    :key="kategori"
+                    :value="kategori"
+                  >
+                    {{ kategori }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="upbjj">UT-Daerah:</label>
+                <select id="upbjj" v-model="newStock.upbjj" required>
+                  <option value="">Pilih UT-Daerah</option>
+                  <option v-for="u in upbjjList" :key="u" :value="u">
+                    {{ u }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="lokasi-rak">Lokasi Rak:</label>
+                <input
+                  type="text"
+                  id="lokasi-rak"
+                  v-model="newStock.lokasiRak"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="harga">Harga:</label>
+                <input
+                  type="number"
+                  id="harga"
+                  v-model.number="newStock.harga"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="stok">Jumlah Stok:</label>
+                <input
+                  type="number"
+                  id="stok"
+                  v-model.number="newStock.qty"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="stock-safety">Stock Safety:</label>
+                <input
+                  type="number"
+                  id="stock-safety"
+                  v-model.number="newStock.safety"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="catatan">Catatan:</label>
+                <input type="text" id="catatan" v-model="newStock.catatan" />
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-submit">Tambah Stock</button>
+                <button
+                  type="button"
+                  class="btn-cancel"
+                  id="btn-cancel-add"
+                  @click="closeModal"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      
+        <!-- Modal Edit Stock (hanya edit qty) -->
+        <div
+          class="modal-overlay"
+          id="modal-edit-stock"
+          v-show="showEditStockModal"
+          @click.self="closeEditModal"
+        >
+          <div class="modal-content">
+            <button
+              class="modal-close"
+              id="modal-edit-stock-close"
+              @click="closeEditModal"
+            >
+              &times;
+            </button>
+            <div class="modal-body">
+              <h2>Edit Stok</h2>
+              <form id="form-edit-stock" @submit.prevent="submitEditStock">
+                <div class="form-group">
+                  <label for="edit-stok">Jumlah Stok (Qty):</label>
+                  <input
+                    type="number"
+                    id="edit-stok"
+                    v-model.number="editStockQty"
+                    required
+                  />
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn-submit">Simpan</button>
+                  <button
+                    type="button"
+                    class="btn-cancel"
+                    @click="closeEditModal"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VUE CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- DATA SOURCE -->
+    <script src="Js/dataBahanAjar.js"></script>
+    <!-- FILE VUE -->
+    <script src="js/stock-app.js"></script>
+  </body>
+</html>
